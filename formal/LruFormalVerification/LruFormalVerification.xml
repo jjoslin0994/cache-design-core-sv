@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+<testsuite timestamp="2025-05-21T20:14:14" hostname="jjoslin0994-B650-AORUS-ELITE-AX" package="LruFormalVerification" id="0" name="default" tests="1" errors="1" failures="0" time="0" skipped="0">
+<properties>
+<property name="os" value="Linux"/>
+<property name="expect" value="PASS"/>
+<property name="status" value="ERROR"/>
+</properties>
+<testcase classname="default" name="default" time="0">
+<error type="ERROR"/>
+</testcase>
+<system-out>SBY 20:14:14 [LruFormalVerification] Removing directory '/home/jjoslin0994/Documents/CacheProject/formal/LruFormalVerification'.
+SBY 20:14:14 [LruFormalVerification] Copy '/home/jjoslin0994/Documents/CacheProject/formal/LruFormal.sv' to '/home/jjoslin0994/Documents/CacheProject/formal/LruFormalVerification/src/LruFormal.sv'.
+SBY 20:14:14 [LruFormalVerification] Copy '/home/jjoslin0994/Documents/CacheProject/formal/LruEvictionPolicy.sv' to '/home/jjoslin0994/Documents/CacheProject/formal/LruFormalVerification/src/LruEvictionPolicy.sv'.
+SBY 20:14:14 [LruFormalVerification] engine_0: smtbmc boolector
+SBY 20:14:14 [LruFormalVerification] base: starting process &quot;cd LruFormalVerification/src; yosys -ql ../model/design.log ../model/design.ys&quot;
+SBY 20:14:14 [LruFormalVerification] base: LruFormal.sv:40: ERROR: syntax error, unexpected ')', expecting '('
+SBY 20:14:14 [LruFormalVerification] base: finished (returncode=1)
+SBY 20:14:14 [LruFormalVerification] base: task failed. ERROR.
+SBY 20:14:14 [LruFormalVerification] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 20:14:14 [LruFormalVerification] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 20:14:14 [LruFormalVerification] summary: engine_0 (smtbmc boolector) did not return a status
+SBY 20:14:14 [LruFormalVerification] summary: engine_0 did not produce any traces
+SBY 20:14:14 [LruFormalVerification] DONE (ERROR, rc=16)
+</system-out>
+<system-err>
+</system-err>
+</testsuite>
+</testsuites>

@@ -1,0 +1,13 @@
+SBY 20:14:14 [LruFormalVerification] Removing directory '/home/jjoslin0994/Documents/CacheProject/formal/LruFormalVerification'.
+SBY 20:14:14 [LruFormalVerification] Copy '/home/jjoslin0994/Documents/CacheProject/formal/LruFormal.sv' to '/home/jjoslin0994/Documents/CacheProject/formal/LruFormalVerification/src/LruFormal.sv'.
+SBY 20:14:14 [LruFormalVerification] Copy '/home/jjoslin0994/Documents/CacheProject/formal/LruEvictionPolicy.sv' to '/home/jjoslin0994/Documents/CacheProject/formal/LruFormalVerification/src/LruEvictionPolicy.sv'.
+SBY 20:14:14 [LruFormalVerification] engine_0: smtbmc boolector
+SBY 20:14:14 [LruFormalVerification] base: starting process "cd LruFormalVerification/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 20:14:14 [LruFormalVerification] base: LruFormal.sv:40: ERROR: syntax error, unexpected ')', expecting '('
+SBY 20:14:14 [LruFormalVerification] base: finished (returncode=1)
+SBY 20:14:14 [LruFormalVerification] base: task failed. ERROR.
+SBY 20:14:14 [LruFormalVerification] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 20:14:14 [LruFormalVerification] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 20:14:14 [LruFormalVerification] summary: engine_0 (smtbmc boolector) did not return a status
+SBY 20:14:14 [LruFormalVerification] summary: engine_0 did not produce any traces
+SBY 20:14:14 [LruFormalVerification] DONE (ERROR, rc=16)

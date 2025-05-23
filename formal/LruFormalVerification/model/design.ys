@@ -1,0 +1,11 @@
+# running in LruFormalVerification/src/
+verilog_defaults -add -sv
+read -formal LruFormal.sv
+read -formal LruEvictionPolicy.sv
+prep -top LruFormal
+
+
+hierarchy -smtcheck
+rename -witness
+write_jny -no-connections ../model/design.json
+write_rtlil ../model/design.il
