@@ -1,0 +1,18 @@
+[options]
+mode bmc
+depth 20
+multiclock on
+
+[engines]
+smtbmc boolector
+
+[script]
+verilog_defaults -add -sv
+read -formal LruFormal.sv
+read -formal LruEvictionPolicy.sv
+prep -top LruFormal
+
+
+[files]
+LruFormal.sv
+LruEvictionPolicy.sv
