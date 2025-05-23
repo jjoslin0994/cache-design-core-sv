@@ -1,5 +1,6 @@
+// Code your design here
 
-interface CacheEvictionInterface #(
+interface EvictionPolicyInterface #(
     parameter int NUM_WAYS = 512,
     parameter int ADDRESS_WIDTH = 32
 );
@@ -36,23 +37,22 @@ interface CacheEvictionInterface #(
 // -------------------------------------------
 
 
-    // Task to be called by the cache controller when a cache line is hit.
-    // The policy will update its internal recency/age state.
-    task automatic updateOnHit(input logic [NUM_WAYS-1:0] hitWayIn); endtask
-        // Implementation will be in the actual policy modules (LRU, FIFO, etc.)
+    // Tasks: Declare without extern or import/export
+    extern task updateOnHit(input logic [NUM_WAYS-1:0] hitWayIn);
 
 
-    // Task to be called by the cache controller when a new block is placed
-    // into a cache line (i.e., allocated after a miss).
-    // The policy will update its internal state to reflect the new entry.
-    task automatic updateOnAllocate(input logic [NUM_WAYS-1:0] allocateWayIn); endtask
-        // Implementation will be in the actual policy modules
+    extern task updateOnAllocate(input logic [NUM_WAYS-1:0] allocateWayIn);
+        // Default empty implementation, override in module
+    
 
-    // Task to be called by the cache controller when it needs an eviction candidate.
-    // The policy will calculate and drive 'evictionTarget' and 'evictionReady'.
-    // The cache controller would typically wait for 'evictionReady' to go high.
-    task automatic getEvictionTarget(); endtask
-        // Implementation will be in the actual policy modules
+    extern task getEvictionTarget();
+        // Default empty implementation, override in module
+    
+
+modport policyIf (
+    input clk, reset_n, hitWay, hit, missWay, miss, allocateWay, allocate
+
+    );
 
 
-endinterface : CacheEvictionInterface
+endinterface : EvictionPolicyInterface

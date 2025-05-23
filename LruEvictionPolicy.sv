@@ -1,10 +1,12 @@
 
-module LruEvictionPolicy (
-    CacheEvictionInterface.LruPolicy policyIf
+module LruEvictionPolicy #(
+    parameter int NUM_WAYS = 512
+)(
+    EvictionPolicyInterface policyIf
 );
 
     // Get parameters from the interface instance
-    localparam int NUM_WAYS = policyIf.NUM_WAYS;
+    //localparam int NUM_WAYS = policyIf.NUM_WAYS;
     localparam int COUNTER_WIDTH = $clog2(NUM_WAYS); 
 
     // counter based LRU where MRU = 0 and LRU = NUM_WAYS - 1
@@ -17,8 +19,9 @@ module LruEvictionPolicy (
     //------------------------------------------------------------
     //  Intatiate Ways
     //------------------------------------------------------------
-    generate : GenerateWays
-        for(genvar i = 0; i < NUM_WAYS; i++) begin
+    generate
+        genvar i;
+        for (i = 0; i < NUM_WAYS; i++) begin : GenerateWays
             Way #(
                 .NUM_WAYS(NUM_WAYS),            // Pass number of ways
                 .ID       (i),                  // pass unique ID to each instance
@@ -36,7 +39,8 @@ module LruEvictionPolicy (
                 .expired (expirationFlags[i])           // flag of expired way
             );
         end
-    endgenerate : GenerateWays
+    endgenerate
+
 
     //------------------------------------------------------------
     //  Identify age to send back
@@ -79,19 +83,20 @@ module LruEvictionPolicy (
 endmodule
 
 module Way #(
-    parameter int NUM_WAYS = 512;
-    parameter int ID       = 0;
-    parameter int COUNTER_WIDTH;
+    parameter int NUM_WAYS = 512,
+    parameter int ID       = 0,
+    parameter int COUNTER_WIDTH = $clog2(NUM_WAYS)
 )(
-    input logic                         clk,            // CPU clock
-    input logic                         reset_n,        // if the way is hit rest the counter
-    input logic                         accessed,       // High when this way is hit
-    input logic [COUNTER_WIDTH - 1:0]   accessedWayAge, // age of the way that was accessed
-    input logic [COUNTER_WIDTH - 1:0]   accessedWayId,  // redundant check of accessed way ID
+    input logic                         clk,
+    input logic                         reset_n,
+    input logic                         accessed,
+    input logic [COUNTER_WIDTH - 1:0]  accessedWayAge,
+    input logic [$clog2(NUM_WAYS)-1:0] accessedWayId,
     
-    output logic [COUNTER_WIDTH - 1:0]  myAge,          // broadcast age to controller to compare to accessed way's age
-    output logic expired                                // Flag indicating this way has expired and need ready to be evicted
+    output logic [COUNTER_WIDTH - 1:0] myAge,
+    output logic                       expired
 );
+
 
 
     logic [COUNTER_WIDTH - 1:0] age;
@@ -101,7 +106,7 @@ module Way #(
 
 
 
-    always_ff @(posedge clk or negedge reset_n) begin AgeCounter
+  always_ff @(posedge clk or negedge reset_n) begin : AgeCounter
 
         if(!reset_n) begin
             // on reset, init to unique age based on ID for well ordering of ways in LRU
