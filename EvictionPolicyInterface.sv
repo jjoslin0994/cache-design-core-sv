@@ -33,26 +33,14 @@ interface EvictionPolicyInterface #(
 
 
 // -------------------------------------------
-// Tasks and Functions
+// Modports
 // -------------------------------------------
 
-
-    // Tasks: Declare without extern or import/export
-    extern task updateOnHit(input logic [NUM_WAYS-1:0] hitWayIn);
-
-
-    extern task updateOnAllocate(input logic [NUM_WAYS-1:0] allocateWayIn);
-        // Default empty implementation, override in module
-    
-
-    extern task getEvictionTarget();
-        // Default empty implementation, override in module
-    
-
-modport policyIf (
-    input clk, reset_n, hitWay, hit, missWay, miss, allocateWay, allocate
-
+	modport internal (
+    	input clk, reset_n, hitWay, hit, missWay, miss, allocateWay, allocate
     );
+      
+
 
 
 endinterface : EvictionPolicyInterface
