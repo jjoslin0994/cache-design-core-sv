@@ -21,8 +21,8 @@ module Way #(
 	// ------------------------------------------------
   	
   	logic [TAG_WIDTH - 1:0] tag;
-  	logic					dirty;
-  	logic 					valid;
+  	logic					          dirty;
+  	logic 					        valid;
 
   
   	// ------------------------------------------------
@@ -72,16 +72,16 @@ module Way #(
 endmodule
 
 module WayAgeTracker #(
-	parameter int NUM_WAYS = 512,
+	  parameter int NUM_WAYS = 512,
     parameter int ID       = 0,
   	parameter int COUNTER_WIDTH = $clog2(NUM_WAYS)
 ) (
-  	input logic 						clk,
-	input logic 						reset_n,
+  	input logic 						            clk,
+	  input logic 						            reset_n,
   	input logic [COUNTER_WIDTH - 1:0] 	accessedWayAge,
-  	input logic 						accessed,
+  	input logic 						            accessed,
   	output logic [COUNTER_WIDTH - 1:0]	myAge,
-  	output logic 						expired	
+  	output logic 						            expired	
 );
   
   logic [COUNTER_WIDTH - 1:0] age;

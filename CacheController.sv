@@ -8,13 +8,14 @@ module CacheController #(
   parameter int ADDRESS_WIDTH 	= 32
 )
   (
-    input logic clk,
-    input logic reset_n,
-    WayInterface wayIfs[NUM_WAYS],
+    input logic 			clk,
+    input logic 			reset_n,
+    ControllerInterface 	controllerIf,
+    WayInterface 			wayIfs[NUM_WAYS],
+    WayLookupInterface		wayLookupIf,
     EvictionPolicyInterface evicPolicyIf
   );
   
-  //WayInterface WayIfs[NUM_WAYS]();  Move to testbench
   
   //----------------------------------------------
   // Instantiate Eviction Policy
