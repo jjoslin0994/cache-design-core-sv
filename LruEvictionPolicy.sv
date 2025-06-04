@@ -2,10 +2,8 @@
 module LruEvictionPolicy #(
     parameter int NUM_WAYS = 512
 )(
-    EvictionPolicyInterface policyIf,
-	
-	WayInterface.policy_side wayIfArray_out[NUM_WAYS]
-
+    EvictionPolicyInterface.internal EvicIf
+	WayInterface.evictionState wayIfs[NUM_WAYS]
 );
 
     localparam int COUNTER_WIDTH = $clog2(NUM_WAYS); 
@@ -14,28 +12,7 @@ module LruEvictionPolicy #(
 
 	// logic [COUNTER_WIDTH - 1:0] wayAges [NUM_WAYS-1:0]; 
     logic [$clog2(NUM_WAYS)-1:0] accessedWayId; // for redundant check
-    logic [COUNTER_WIDTH - 1:0] accessedWayAge;
-
-  
-  	
-  WayInterface #(COUNTER_WIDTH, NUM_WAYS) wayIfArray[NUM_WAYS](); // array of way instances 
-
-    //------------------------------------------------------------
-    //  Intatiate Ways
-    //------------------------------------------------------------
-    generate
-        genvar i;
-        for (i = 0; i < NUM_WAYS; i++) begin : GenerateWays
-          Way #(
-            .NUM_WAYS(NUM_WAYS),
-            .ID(i),
-            .COUNTER_WIDTH(COUNTER_WIDTH)
-          ) way_inst(
-            .wayIf(wayIfArray[i]) // stor instance in array
-          );
-        end : GenerateWays
-    endgenerate
- 
+    logic [COUNTER_WIDTH - 1:0] accessedWayAge; 
 
     //------------------------------------------------------------
     //  Identify age to send back
@@ -45,10 +22,10 @@ module LruEvictionPolicy #(
         accessedWayId = 0;
 
         for(int i = 0; i < NUM_WAYS; i++) begin
-            if  (policyIf.hitWay[i] || policyIf.allocateWay[i]) begin  // traverse ways to identify first hit way (should only ever be one)
-              accessedWayAge = wayIfArray[i].myAge;                           // set the value to send back to other ways
+          if  (EvicIf.hitWay[i] || EvicIf.allocateWay[i]) begin  // traverse ways to identify first hit way (should only ever be one)
+              accessedWayAge = wayIfArray[i].myAge;              // set the value to send back to other ways
                 accessedWayId = i;
-                break;                                                 // only identify the one age
+                break;                                           // only identify the one age
             end
         end
     end
@@ -73,18 +50,6 @@ module LruEvictionPolicy #(
       end
 
     end : getEvictionTarget
-
-    // ----------------------------------------------------------------
-    // Implementation of Interface Tasks
-    // ----------------------------------------------------------------
-
-    task automatic policyIf.updateOnHit(input logic [NUM_WAYS-1:0] hitWayIn); endtask // No-op task
-
-    task automatic policyIf.updateOnAllocate(input logic [NUM_WAYS-1:0] allocateWayIn); endtask // No-op task
-
-    
-
-
 
 
 endmodule

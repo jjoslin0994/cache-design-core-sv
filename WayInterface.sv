@@ -36,22 +36,22 @@ interface WayInterface #(
   // Modport definition
   // -------------------------------------------
   modport master ( // writes data
-    input .wEn(wEn),
-    input .dataIn(dataIn)
+    input wEn,
+    input dataIn
   );
   
   modport slave ( // for reading data
-    output .tag(tag),
-    output .dataOut(dataOut),
-    output .valid(valid)
+    output tag,
+    output dataOut,
+    output valid
   );
   
   modport evictionState (
-    input .accessed(accessed),
-    input .accessedWayAge(accessedWayAge),
-    output .dirty(dirty),
-    output .myage(myAge),
-    output .expired(expired)
+    input accessed,
+    input accessedWayAge,
+    output dirty,
+    output myAge,
+    output expired
     
   );
   
