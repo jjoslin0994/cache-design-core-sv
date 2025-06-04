@@ -8,19 +8,24 @@ module CacheController #(
   parameter int ADDRESS_WIDTH 	= 32
 )
   (
-  input logic clk,
-  input logic reset_n,
-  WayInterface.master 			WayMasterIf,
-  WayInterface.slave			WaySlaveIf,
-  WayInterface.evictionState 	WayEvictionIf
-);
+    input logic clk,
+    input logic reset_n,
+    WayInterface wayIfs[NUM_WAYS],
+    EvictionPolicyInterface evicPolicyIf
+  );
   
-  WayInterface WayIfs[NUM_WAYS]();
+  //WayInterface WayIfs[NUM_WAYS]();  Move to testbench
   
   //----------------------------------------------
   // Instantiate Eviction Policy
   //----------------------------------------------
-  
+  LruEvictionPolicy #(
+    .NUM_WAYS(NUM_WAYS)
+  ) LruPolicyInst(
+    .clk(clk),
+    .reset_n(reset_n),
+    .wayIfs(wayIfs)
+  );
   
   
   //----------------------------------------------
@@ -30,7 +35,7 @@ module CacheController #(
   genvar i;
   
   generate
-    for (i = 0; i < NUM_WAYS; i++) begin : GenereateWays
+    for (i = 0; i < NUM_WAYS; i++) begin : GenerateWays
       Way #(
         .NUM_WAYS(NUM_WAYS),
         .ID(i),
@@ -39,9 +44,9 @@ module CacheController #(
         .BLOCK_SIZE(BLOCK_SIZE),
         .ADDRESS_WIDTH(ADDRESS_WIDTH)
         ) WayInst (
-        .clk(clk)
+        .clk(clk),
         .reset_n(reset_n),
-        .WayIf(WayIfs[i].internal)
+        .wayIfs(wayIfs[i].internal)
       );  
     end : GenerateWays
   endgenerate
