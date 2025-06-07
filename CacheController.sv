@@ -8,11 +8,12 @@ module CacheController #(
   parameter int ADDRESS_WIDTH 	= 32
 )
   (
-    input logic 			clk,
-    input logic 			reset_n,
-    ControllerInterface 	controllerIf,
-    WayInterface 			wayIfs[NUM_WAYS],
-    WayLookupInterface		wayLookupIf,
+    input logic 			      clk, reset_n, // global signals 
+
+    // Interfaces passed in from testbench
+    ControllerInterface 	  controllerIf,
+    WayInterface 			      wayIfs[NUM_WAYS],
+    WayLookupInterface		  wayLookupIf,
     EvictionPolicyInterface evicPolicyIf
   );
   
@@ -25,7 +26,9 @@ module CacheController #(
   ) LruPolicyInst(
     .clk(clk),
     .reset_n(reset_n),
-    .wayIfs(wayIfs)
+    .wayIfs(wayIfs),
+    .wayLookupIf(wayLookupIf),
+    .evicPolicyIf(evicPolicyIf)
   );
   
   

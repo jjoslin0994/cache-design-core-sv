@@ -2,54 +2,81 @@
 module LruEvictionPolicy #(
     parameter int NUM_WAYS = 512
 )(
-    EvictionPolicyInterface.internal EvicIf
-	WayInterface.evictionState wayIfs[NUM_WAYS]
+  logic clk, reset_n,
+  WayInterface.evictionState        wayIfs[NUM_WAYS],
+  WayLookupInterface.slave          wayLookupIf,
+  EvictionPolicyInterface.internal  evicPolicyIf
 );
 
-    localparam int COUNTER_WIDTH = $clog2(NUM_WAYS); 
+  localparam int COUNTER_WIDTH = $clog2(NUM_WAYS); 
 
-    // counter based LRU where MRU = 0 and LRU = NUM_WAYS - 1
+  // logic [COUNTER_WIDTH - 1:0] wayAges [NUM_WAYS-1:0]; 
+  logic [$clog2(NUM_WAYS)-1:0]  accessedWayId; // for redundant check
+  logic [COUNTER_WIDTH - 1:0]   accessedWayAge;
 
-	// logic [COUNTER_WIDTH - 1:0] wayAges [NUM_WAYS-1:0]; 
-    logic [$clog2(NUM_WAYS)-1:0] accessedWayId; // for redundant check
-    logic [COUNTER_WIDTH - 1:0] accessedWayAge; 
-
-    //------------------------------------------------------------
-    //  Identify age to send back
-    //------------------------------------------------------------
-    always_comb begin : CalculateAccessedWayAge
-        accessedWayAge = 0;
-        accessedWayId = 0;
-
-        for(int i = 0; i < NUM_WAYS; i++) begin
-          if  (EvicIf.hitWay[i] || EvicIf.allocateWay[i]) begin  // traverse ways to identify first hit way (should only ever be one)
-              accessedWayAge = wayIfArray[i].myAge;              // set the value to send back to other ways
-                accessedWayId = i;
-                break;                                           // only identify the one age
-            end
-        end
-    end
-  
-  	// ----------------------------------------------------------
-  	// Prepare evicition target --- notify control module
-  	// ----------------------------------------------------------
-  
-    always_comb begin : getEvictionTarget
-      policyIf.evictionTarget = '0;
-      policyIf.evictionReady = 0;
-
+  //------------------------------------------------------------
+  //  Identify age of accessed way
+  //------------------------------------------------------------
+  always_ff @(posedge clk or negedge reset_n) begin : FindAccessedWayAge
+    if(!reset_n) begin
       for (int i = 0; i < NUM_WAYS; i++) begin
-        if(wayIfArray[i].expired) begin
-          policyIf.evictionTarget = 1'b1 << i;
-          break;
+        wayIfs[i].accessed <= 0;
+        wayIfs[i].accessedWayAge <= 0;
+        accessedWayAge <= 0;
+      end
+    end else if(wayLookupIf.hit) begin
+      for(int i = 0; i < NUM_WAYS; i++) begin
+        if(wayLookupIf.hitWay == wayIfs[i].thisWay) begin
+          wayIfs[i].accessed <= 1;
+          accessedWayAge <= wayIfs[i].myAge;
         end
       end
 
-      if(policyIf.evictionTarget != '0) begin
-        policyIf.evictionReady = 1;
+      for(int i = 0; i < NUM_WAYS; i++) begin
+        wayIfs[i].accessedWayAge <= accessedWayAge;
+      end
+    end else begin
+      for (int i = 0; i < NUM_WAYS; i++) begin
+        wayIfs[i].accessed <= 0;
+        wayIfs[i].accessedWayAge <= 0;
+      end
+    end
+  end
+
+  always_comb begin : FindAccessedWayAge
+    accessedWayAge  = 0;
+    if(wayLookupIf.hit) begin
+      for(int i = 0; i < NUM_WAYS; i++) begin
+        if (wayLookupIf.hitWay[i]) begin  // traverse ways to identify first hit way (should only ever be one)
+          accessedWayAge = wayIfs[i].myAge;              // set the value to send back to other ways
+          accessedWayAgeReady = 1;
+          wayIfs[i].accessed = 1;
+          break;                                           // only identify the one age
+        end
       end
 
-    end : getEvictionTarget
+      for(int i = 0; i < NUM_WAYS; i++) begin
+        wayIfs[i].accessedWayAge = accessedWayAge;
+      end
+    end
+  end
+
+  // ----------------------------------------------------------
+  // Prepare evicition target --- notify control module
+  // ----------------------------------------------------------
+  always_comb begin : getEvictionTarget
+    evicPolicyIf.evictionTarget = '0;
+    evicPolicyIf.evictionReady = 0;
+
+    for (int i = 0; i < NUM_WAYS; i++) begin
+      if(wayIfs[i].expired) begin
+        evicPolicyIf.evictionTarget = 1'b1 << i;
+        evicPolicyIf.evictionReady = 1;
+        break;
+      end
+    end
+
+  end : getEvictionTarget
 
 
 endmodule
