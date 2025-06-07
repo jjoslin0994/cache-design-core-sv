@@ -33,10 +33,11 @@ module Way #(
   
   always_ff@(posedge clk or negedge reset_n) begin : DataManagement
       if(!reset_n) begin
-		  tag <= 	'0;
-          dirty <= 	0;
-          valid <= 	0;
-          data <= 	'0;
+		    tag <= 	'0;
+        dirty <= 	0;
+        valid <= 	0;
+        data <= 	'0;
+        wayIf.thisWay = 1 << ID;
       end else if(WayIf.allocate) begin
           tag <= WayIf.address[ADDRESS_WIDTH - 1:OFFSET_WIDTH];
           dirty <= 	0;
@@ -81,7 +82,7 @@ module WayAgeTracker #(
   	input logic [COUNTER_WIDTH - 1:0] 	accessedWayAge,
   	input logic 						            accessed,
   	output logic [COUNTER_WIDTH - 1:0]	myAge,
-  	output logic 						            expired	
+  	output logic 						            expired,
 );
   
   logic [COUNTER_WIDTH - 1:0] age;
