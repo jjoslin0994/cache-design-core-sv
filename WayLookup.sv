@@ -3,26 +3,28 @@ module WayLookup #(
   parameter int ADDRESS_WIDTH   = 32,
   parameter int BLOCK_SIZE      = 32
 ) (
-  input clk, reset_n, // global signals
+  input logic clk, reset_n, // global signals
   WayLookupInterface LookupIf,
   WayInterface.slave wayIfs[NUM_WAYS]
 );
   
 
-  always_comb begin : MatchTag
-    LookupIf.hitWay = '0;
-    LookupIf.hit 	= 0;
-    LookupIf.miss 	= 0;
-    
-    for(int i = 0; i < NUM_WAYS; i++) begin
-      if(wayIfs[i].valid && wayIfs[i].tag == LookupIf.tag) begin
-        LookupIf.hitWay = 1 << i; // one-hot encoding
-        LookupIf.hit = 1;
-        break;
-      end
+  logic [NUM_WAYS - 1:0] wayHits;
+  
+  generate
+    for(genvar i = 0; i < NUM_WAYS; i++) begin
+      assign wayHits[i] = (wayIfs[i].valid===1'b1) && (wayIfs[i].tag == LookupIf.tag);      
     end
+  endgenerate
+  
+
+  
+  always_comb begin
     
-	LookupIf.miss = ~LookupIf.hit;
-  end : MatchTag
+    LookupIf.hitWay = wayHits;
+    LookupIf.hit 	= |(wayHits);
+    LookupIf.miss 	= ~(|wayHits);
+    
+  end
 
 endmodule

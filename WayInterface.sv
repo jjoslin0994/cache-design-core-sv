@@ -36,15 +36,21 @@ interface WayInterface #(
   // -------------------------------------------
   // Modport definition
   // -------------------------------------------
-  modport master ( // writes data
+  modport write ( // writes data
     input wEn,
     input dataIn
   );
   
-  modport slave ( // for reading data
+  modport master ( // for reading data
     output tag,
     output dataOut,
     output valid
+  );
+  
+    modport slave ( // for reading data
+    input tag,
+    input dataOut,
+    input valid
   );
   
   modport evictionState (
@@ -52,8 +58,8 @@ interface WayInterface #(
     output  accessedWayAge, // age of the accessed way
     input   dirty,          // this way has been written to 
     input   myAge,          // age of this way
-    input   expired         // this way is the LRU
-    input   thisWay,        // One-hot encoded
+    input   expired,         // this way is the LRU
+    input   thisWay        // One-hot encoded
     
   );
   

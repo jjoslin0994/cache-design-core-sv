@@ -55,6 +55,67 @@ module CacheController #(
     end : GenerateWays
   endgenerate
   
+  //----------------------------------------------
+  // Instantiate Lookup Module
+  //----------------------------------------------
+  WayLookup #(
+    .NUM_WAYS(NUM_WAYS),
+    .ADDRESS_WIDTH(ADDRESS_WIDTH),
+    .BLOCK_SIZE(BLOCK_SIZE)
+  ) lookupInst (
+    .clk(clk),
+    .reset_n(reset_n),
+    .LookupIf(wayLookupIf),
+    .wayIfs(wayIfs[i])
+  );
+
+  // -------------------------------------------------------
+  // Flow Cotrol FSM
+  // -------------------------------------------------------
+
+  localparam IDLE     = 3'd0; // Wait for CPU request
+  localparam LOOKUP   = 3'd1; // Compare tags of ways
+  localparam HIT      = 3'd2; // If hit send data to CPU
+  localparam MISS     = 3'd3; // Handle Miss (Get eviction target from Policy Module) request data from Main Mem
+  localparam ALLOCATE = 3'd4; // Overwrite way marked for eviction 
+
+  logic [2:0] controlState;
+
+  always_ff @(posedge clk or negedge reset_n) begin : CacheFlowControl
+    if(!reset_n) begin
+      controlSate <= IDLE;
+    end
+    else begin
+      case (controlSate)
+        IDLE : begin
+          if(controllerIf.request)begin
+            controlSate <= LOOKUP;
+          end
+        end
+
+        LOOKUP : begin
+
+        end
+
+        HIT : begin
+
+        end
+
+        MISS : begin
+
+        end
+
+        ALLOCATE : begin
+
+        end
+
+        default: controlState <= IDLE;
+      endcase
+
+    end
+
+  end
+  
   
   
   

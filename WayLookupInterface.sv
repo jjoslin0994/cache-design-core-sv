@@ -12,13 +12,13 @@ interface WayLookupInterface #(
     logic                   hit, miss;
 
 
-    modport master ( // controller inputs tag and recieves hit/miss info
-        input tag,
-        output hitWay, hit, miss
+    modport master ( // controller ouputs tag to lookup module and recieves hit/miss info
+        output tag, 
+        input hitWay, hit, miss
     );
 
     modport slave ( // Eviction Policy reads hit / miss data
-        output hitWay, hit, miss,
+        input hitWay, hit, miss
     );
 
     modport internal (
