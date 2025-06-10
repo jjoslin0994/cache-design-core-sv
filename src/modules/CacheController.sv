@@ -10,7 +10,7 @@ module CacheController #(
   (
     input logic 			      clk, reset_n, // global signals 
 
-    // Interfaces passed in from testbench
+    // Full Interfaces passed in from testbench
     ControllerInterface 	  controllerIf,
     WayInterface 			      wayIfs[NUM_WAYS],
     WayLookupInterface		  wayLookupIf,
@@ -66,7 +66,7 @@ module CacheController #(
     .clk(clk),
     .reset_n(reset_n),
     .LookupIf(wayLookupIf),
-    .wayIfs(wayIfs[i])
+    .wayIfs(wayIfs)
   );
 
   // -------------------------------------------------------
@@ -81,28 +81,39 @@ module CacheController #(
 
   logic [2:0] controlState;
 
+  logic [DATA_WIDTH - 1:0] dataBackup;
+
   always_ff @(posedge clk or negedge reset_n) begin : CacheFlowControl
     if(!reset_n) begin
-      controlSate <= IDLE;
+      controlState <= IDLE;
     end
     else begin
-      case (controlSate)
+      case (controlState)
         IDLE : begin
           if(controllerIf.request)begin
-            controlSate <= LOOKUP;
+            controlState <= LOOKUP;
           end
         end
 
-        LOOKUP : begin
-
+        LOOKUP : begin // Lookup Module is combinational 
+          if(wayLookupIf.hit === 1'b1) begin
+            controlState <= HIT;
+          end 
+          else if(wayLookupIf.miss === 1'b1)
+            controlState <= MISS;
         end
 
         HIT : begin
-
+          controllerIf.dataOut   <= wayIfs.dataOut; // send drequested data to CPU
+          evicPolicyIf.hit        <= (wayLookupIf.hit == 1'b1); 
+          evicPolicyIf.hitWay     <= wayLookupIf.hitWay
+          evicPolicyIf.miss       <= '0; 
+          evicPolicyIf.missWay    <= '0; // all zeros encodes nowhere
         end
 
-        MISS : begin
-
+        MISS : begin // check dirty bit, wiriteback as needed, wait for validation from writeback moduel
+          dataBackup <= // need to make module to check dirty bit and send back data. 
+          
         end
 
         ALLOCATE : begin

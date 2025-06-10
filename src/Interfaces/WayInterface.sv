@@ -37,8 +37,8 @@ interface WayInterface #(
   // Modport definition
   // -------------------------------------------
   modport write ( // writes data
-    input wEn,
-    input dataIn
+    input wEn, tag, allocate, dataIn,// driven by EvictionAllocate
+    output dataOut
   );
   
   modport master ( // for reading data
