@@ -23,7 +23,7 @@ logic [ADDRESS_WIDTH - 1:0]   writeBackAddress;
 // CPU to Cache
 // -----------------------------------------
 logic                       request;
-logic [ADDRESS_WIDTH - 1:0] cpuRequestAddress;
+logic [ADDRESS_WIDTH - 1:0] cpuRequesstAddress;
 logic [DATA_WIDTH -1:0]     dataFromRegister; // to be written to cache
 
 // -----------------------------------------
