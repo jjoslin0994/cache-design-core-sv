@@ -104,16 +104,17 @@ module CacheController #(
         end
 
         HIT : begin
-          controllerIf.dataOut   <= wayIfs.dataOut; // send drequested data to CPU
+          controllerIf.dataOut    <= wayIfs.dataOut; // send requested data to CPU
           evicPolicyIf.hit        <= (wayLookupIf.hit == 1'b1); 
-          evicPolicyIf.hitWay     <= wayLookupIf.hitWay
+          evicPolicyIf.hitWay     <= wayLookupIf.hitWay;
           evicPolicyIf.miss       <= '0; 
           evicPolicyIf.missWay    <= '0; // all zeros encodes nowhere
         end
 
         MISS : begin // check dirty bit, wiriteback as needed, wait for validation from writeback moduel
           dataBackup <= // need to make module to check dirty bit and send back data. 
-          
+
+          controlState <= allcoate;
         end
 
         ALLOCATE : begin

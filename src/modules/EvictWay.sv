@@ -17,7 +17,7 @@ module EvictAndAllocateWay #(
         assign wayIfs[i].dataIn = (wayIfs[i].allocate === 1'b1) 
                 && (evictionIf.target[i] === 1'b1) 
                 && (wayIfs[i].wEn === 1'b1) 
-                ? evictionIf.dataIn : evictionIf.dataBackup;
+                ? evictionIf.dataIn : 0;
     end
   endgenerate
 
