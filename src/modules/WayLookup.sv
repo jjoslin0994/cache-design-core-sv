@@ -21,7 +21,7 @@ module WayLookup #(
   
   always_comb begin
     
-    LookupIf.hitWay = wayHits;
+    LookupIf.hitWay = wayHits; // one-hot encoding of the way.
     LookupIf.hit 	= |(wayHits);
     LookupIf.miss 	= ~(|wayHits);
     

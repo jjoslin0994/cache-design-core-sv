@@ -1,6 +1,3 @@
-`include "WayInterface.sv"
-`include "CacheDataFetcherInterface.sv"
-
 // Code your design here
 module CacheDataFetcher #(
   parameter int NUM_WAYS    = 512,

@@ -11,10 +11,11 @@ module CacheController #(
     input logic 			      clk, reset_n, // global signals 
 
     // Full Interfaces passed in from testbench
-    ControllerInterface 	  controllerIf,
-    WayInterface 			      wayIfs[NUM_WAYS],
-    WayLookupInterface		  wayLookupIf,
-    EvictionPolicyInterface evicPolicyIf
+    ControllerInterface 	    controllerIf,
+    WayInterface 			        wayIfs[NUM_WAYS],
+    WayLookupInterface		    wayLookupIf,
+    EvictionPolicyInterface   evicPolicyIf,
+    CacheDataFetcherInterface CacheDataFetcherIf
   );
   
   
@@ -36,10 +37,8 @@ module CacheController #(
   // Instantiate Ways
   //----------------------------------------------
   
-  genvar i;
-  
   generate
-    for (i = 0; i < NUM_WAYS; i++) begin : GenerateWays
+    for (genvar i = 0; i < NUM_WAYS; i++) begin : GenerateWays
       Way #(
         .NUM_WAYS(NUM_WAYS),
         .ID(i),
@@ -73,15 +72,20 @@ module CacheController #(
   // Flow Cotrol FSM
   // -------------------------------------------------------
 
-  localparam IDLE     = 3'd0; // Wait for CPU request
-  localparam LOOKUP   = 3'd1; // Compare tags of ways
-  localparam HIT      = 3'd2; // If hit send data to CPU
-  localparam MISS     = 3'd3; // Handle Miss (Get eviction target from Policy Module) request data from Main Mem
-  localparam ALLOCATE = 3'd4; // Overwrite way marked for eviction 
+  localparam IDLE         = 3'd0; // Wait for CPU request
+  localparam LOOKUP       = 3'd1; // Compare tags of ways
+  localparam HIT          = 3'd2; // If hit get data from way
+  localparam MISS         = 3'd3; // Send requested data to registers
+  localparam ALLOCATE     = 3'd4; // Wrtie back from registers
+  localparam READ         = 3'd5; // Handle Miss (Get eviction target from Policy Module) request data from Main Mem
+  localparam WRITE        = 3'd6; // Overwrite way marked for eviction 
+  // localparam ALLOCATE_W   = 3'd7; // Allcoate register for write from registers
 
-  logic [2:0] controlState;
+  logic [2:0]             controlState;
+  logic [NUM_WAYS - 1:0]  dirtyBitBuffer;
+  logic                   victimIsDirty; 
 
-  logic [DATA_WIDTH - 1:0] dataBackup;
+  logic [DATA_WIDTH - 1:0] dataToCpu;
 
   always_ff @(posedge clk or negedge reset_n) begin : CacheFlowControl
     if(!reset_n) begin
@@ -95,7 +99,7 @@ module CacheController #(
           end
         end
 
-        LOOKUP : begin // Lookup Module is combinational 
+        LOOKUP : begin 
           if(wayLookupIf.hit === 1'b1) begin
             controlState <= HIT;
           end 
@@ -104,20 +108,52 @@ module CacheController #(
         end
 
         HIT : begin
-          controllerIf.dataOut    <= wayIfs.dataOut; // send requested data to CPU
+          // Policy updat
           evicPolicyIf.hit        <= (wayLookupIf.hit == 1'b1); 
           evicPolicyIf.hitWay     <= wayLookupIf.hitWay;
           evicPolicyIf.miss       <= '0; 
-          evicPolicyIf.missWay    <= '0; // all zeros encodes nowhere
+
+          if(controllerIf.read) begin // fetch data from way 
+            CacheDataFetcherIf.targetWay <= wayLookupIf.hitWay;
+            controlState <= READ;
+          end
+          if(controllerIf.write) begin
+            controlState <= WRITE;
+          end
+
         end
 
         MISS : begin // check dirty bit, wiriteback as needed, wait for validation from writeback moduel
-          dataBackup <= // need to make module to check dirty bit and send back data. 
+          evicPolicyIf.miss <= (wayLookupIf.hit == 1'b0);
+          controlState <= ALLOCATE;
+          if(victimIsDirty)
+            controlState <= WRITEBACK;
+          else
+            controlState <= ALLOCATE;
+        end
 
-          controlState <= allcoate;
+        WRITEBACK : begin
+
+          controlState <= ALLOCATE;
         end
 
         ALLOCATE : begin
+
+
+          if(controllerIf.read) begin // fetch data from way 
+            CacheDataFetcherIf.targetWay <= wayLookupIf.hitWay;
+            controlState <= READ;
+          end
+          if(controllerIf.write) begin
+            controlState <= WRITE;
+          end
+        end
+
+        READ : begin
+          controllerIf.dataToRegister <= CacheDataFetcherIf.dataOut; // send read data to CPU register
+        end
+
+        WRITE : begin // Write to Cache
 
         end
 
@@ -128,8 +164,17 @@ module CacheController #(
 
   end
   
+  generate
+
+    for (genvar i = 0; i < NUM_WAYS; i++) begin
+      assign dirtyBitBuffer[i] = (evicPolicyIf.evictionTarget[i] & wayIfs[i].dirty);
+    end
+
+  endgenerate
   
-  
+  always_comb begin
+    victimIsDirty = |(dirtyBitBuffer);
+  end
   
   
 endmodule

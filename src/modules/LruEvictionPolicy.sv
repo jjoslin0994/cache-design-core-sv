@@ -2,82 +2,59 @@
 module LruEvictionPolicy #(
     parameter int NUM_WAYS = 512
 )(
-  logic clk, reset_n,
+  input clk, reset_n,
   WayInterface.evictionState        wayIfs[NUM_WAYS],
-  WayLookupInterface.slave          wayLookupIf,
   EvictionPolicyInterface.internal  evicPolicyIf
 );
 
   localparam int COUNTER_WIDTH = $clog2(NUM_WAYS); 
 
-  // logic [COUNTER_WIDTH - 1:0] wayAges [NUM_WAYS-1:0]; 
-  logic [$clog2(NUM_WAYS)-1:0]  accessedWayId; // for redundant check
-  logic [COUNTER_WIDTH - 1:0]   accessedWayAge;
-
   //------------------------------------------------------------
   //  Identify age of accessed way
   //------------------------------------------------------------
-  always_ff @(posedge clk or negedge reset_n) begin : FindAccessedWayAge
-    if(!reset_n) begin
-      for (int i = 0; i < NUM_WAYS; i++) begin
-        wayIfs[i].accessed <= 0;
-        wayIfs[i].accessedWayAge <= 0;
-        accessedWayAge <= 0;
-      end
-    end else if(wayLookupIf.hit) begin
-      for(int i = 0; i < NUM_WAYS; i++) begin
-        if(wayLookupIf.hitWay == wayIfs[i].thisWay) begin
-          wayIfs[i].accessed <= 1;
-          accessedWayAge <= wayIfs[i].myAge;
-        end
-      end
+  logic [COUNTER_WIDTH - 1:0] ageLocalBuffer [NUM_WAYS];
+  logic [COUNTER_WIDTH - 1:0] accessedWayAge;
+  generate
 
-      for(int i = 0; i < NUM_WAYS; i++) begin
-        wayIfs[i].accessedWayAge <= accessedWayAge;
-      end
-    end else begin
-      for (int i = 0; i < NUM_WAYS; i++) begin
-        wayIfs[i].accessed <= 0;
-        wayIfs[i].accessedWayAge <= 0;
-      end
+    for(genvar i = 0; i < NUM_WAYS; i++) begin
+      assign wayIfs[i].accessed = evicPolicy.hitWay[i];
+      assign ageLocalBuffer[i] = (evicPolicy.hitWay[i]) ? wayIfs[i].myAge : '0;
+    end
+
+  endgenerate
+
+  always_comb begin // OR together age buffer
+    accessedWayAge = 0;
+    for (int i = 0; i < NUM_WAYS; i++) begin
+      accessedWayAge |= ageLocalBuffer[i];
     end
   end
 
-  always_comb begin : FindAccessedWayAge
-    accessedWayAge  = 0;
-    if(wayLookupIf.hit) begin
-      for(int i = 0; i < NUM_WAYS; i++) begin
-        if (wayLookupIf.hitWay[i]) begin  // traverse ways to identify first hit way (should only ever be one)
-          accessedWayAge = wayIfs[i].myAge;              // set the value to send back to other ways
-          accessedWayAgeReady = 1;
-          wayIfs[i].accessed = 1;
-          break;                                           // only identify the one age
-        end
-      end
+  generate // generate signal propogate (fan-out to all ways)
 
-      for(int i = 0; i < NUM_WAYS; i++) begin
-        wayIfs[i].accessedWayAge = accessedWayAge;
-      end
+    for (genvar i = 0; i < NUM_WAYS; i++) begin
+      assign wayIfs[i].accessedWayAge = accessedWayAge;
     end
-  end
+
+  endgenerate
 
   // ----------------------------------------------------------
   // Prepare evicition target --- notify control module
   // ----------------------------------------------------------
-  always_comb begin : getEvictionTarget
-    evicPolicyIf.evictionTarget = '0;
-    evicPolicyIf.evictionReady = 0;
+  logic [NUM_WAYS - 1:0] evicitionTarget;
 
-    for (int i = 0; i < NUM_WAYS; i++) begin
-      if(wayIfs[i].expired) begin
-        evicPolicyIf.evictionTarget = 1'b1 << i;
-        evicPolicyIf.evictionReady = 1;
-        break;
-      end
+  generate
+    for(genvar i = 0; i < NUM_WAYS; i++)begin
+      assign evicitionTarget[i] = wayIfs[i].expired;
     end
+  endgenerate
 
-  end : getEvictionTarget
+  always_comb begin
 
+    evicPolicyIf.evictionTarget = evictionTarget;
+    evicPolicyIf.evictionReady  = |(evicitionTarget);
 
-endmodule
+  end
+
+  endmodule
 
