@@ -17,8 +17,8 @@ module LruEvictionPolicy #(
   generate
 
     for(genvar i = 0; i < NUM_WAYS; i++) begin
-      assign wayIfs[i].accessed = evicPolicy.hitWay[i];
-      assign ageLocalBuffer[i] = (evicPolicy.hitWay[i]) ? wayIfs[i].myAge : '0;
+      assign wayIfs[i].accessed = evicPolicyIf.hitWay[i];
+      assign ageLocalBuffer[i] = (evicPolicyIf.hitWay[i]) ? wayIfs[i].myAge : '0;
     end
 
   endgenerate
@@ -31,11 +31,9 @@ module LruEvictionPolicy #(
   end
 
   generate // generate signal propogate (fan-out to all ways)
-
     for (genvar i = 0; i < NUM_WAYS; i++) begin
       assign wayIfs[i].accessedWayAge = accessedWayAge;
     end
-
   endgenerate
 
   // ----------------------------------------------------------
@@ -50,10 +48,8 @@ module LruEvictionPolicy #(
   endgenerate
 
   always_comb begin
-
     evicPolicyIf.evictionTarget = evictionTarget;
     evicPolicyIf.evictionReady  = |(evicitionTarget);
-
   end
 
   endmodule

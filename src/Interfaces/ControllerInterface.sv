@@ -10,7 +10,7 @@ interface ControllerInterface #(
 // From memory to cache
 // -----------------------------------------
 logic [8 * BLOCK_SIZE - 1:0]  fetchedData;    // Data fetched from main memory
-logic [ADDRESS_WIDTH - 1:0]   fetchAddress; // Base address of fetched block
+logic [ADDRESS_WIDTH - 1:0]   fetchAddress;   // Base address of fetched block
 
 
 // -----------------------------------------
@@ -20,16 +20,14 @@ logic [8 * BLOCK_SIZE - 1:0]  writeBackData;  // Data to write back to main memo
 logic [ADDRESS_WIDTH - 1:0]   writeBackAddress;
 
 // -----------------------------------------
-// CPU to Cache
+// CPU <--> Cache
 // -----------------------------------------
-logic                       request;
-logic [ADDRESS_WIDTH - 1:0] cpuRequesstAddress;
-logic [DATA_WIDTH -1:0]     dataFromRegister; // to be written to cache
+logic                       request, read, write; // Control
+logic [ADDRESS_WIDTH - 1:0] cpuRequesstAddress;   // Adress requested by CPU
+logic [DATA_WIDTH -1:0]     dataFromRegister;     // Write to Cache
+logic [DATA_WIDTH - 1:0]    dataToRegister;       // Write to Registers
 
-// -----------------------------------------
-// Cache to CPU
-// -----------------------------------------
-logic [DATA_WIDTH -1:0]     dataToRegister; // to register
+
 
 
 
