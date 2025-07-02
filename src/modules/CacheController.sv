@@ -17,6 +17,9 @@ module CacheController #(
     EvictionPolicyInterface   evicPolicyIf,
     CacheDataFetcherInterface CacheDataFetcherIf
   );
+
+  localparam OFFSET_WIDTH = $clog2(BLOCK_SIZE);
+  localparam TAG_WIDTH    = ADDRESS_WIDTH - OFFSET_WIDTH;
   
   
   //----------------------------------------------
@@ -81,11 +84,16 @@ module CacheController #(
   localparam WRITE        = 3'd6; // Overwrite way marked for eviction 
   // localparam ALLOCATE_W   = 3'd7; // Allcoate register for write from registers
 
-  logic [2:0]             controlState;
-  logic [NUM_WAYS - 1:0]  dirtyBitBuffer;
-  logic                   victimIsDirty; 
+  logic [2:0]                 controlState;
+  logic [NUM_WAYS - 1:0]      dirtyBitBuffer;
+  logic                       victimIsDirty; 
 
-  logic [DATA_WIDTH - 1:0] dataToCpu;
+
+
+
+  logic [DATA_WIDTH - 1:0]  dataToCpu;
+
+
 
   always_ff @(posedge clk or negedge reset_n) begin : CacheFlowControl
     if(!reset_n) begin
@@ -125,20 +133,22 @@ module CacheController #(
 
         MISS : begin // check dirty bit, wiriteback as needed, wait for validation from writeback moduel
           evicPolicyIf.miss <= (wayLookupIf.hit == 1'b0);
-          controlState <= ALLOCATE;
-          if(victimIsDirty)
+
+          if(victimIsDirty) begin
+            CacheDataFetcherIf.target <= evicPolicyIf.evicitionTarget; // Fetch Data for Write Back
             controlState <= WRITEBACK;
-          else
+          end else
             controlState <= ALLOCATE;
         end
 
-        WRITEBACK : begin
+        WRITEBACK : begin // To Main Memory
+          if(!waitingForAck)begin
+            controlState <= ALLOCATE;
+          end
 
-          controlState <= ALLOCATE;
         end
 
         ALLOCATE : begin
-
 
           if(controllerIf.read) begin // fetch data from way 
             CacheDataFetcherIf.targetWay <= wayLookupIf.hitWay;
@@ -164,6 +174,10 @@ module CacheController #(
 
   end
   
+
+  // ------------------------------------------
+  // Dirty Bit 
+  // ------------------------------------------
   generate
 
     for (genvar i = 0; i < NUM_WAYS; i++) begin
@@ -175,6 +189,24 @@ module CacheController #(
   always_comb begin
     victimIsDirty = |(dirtyBitBuffer);
   end
-  
+
+
+
+  always_ff @(posedge clk or negedge reset_n ) begin // writeback buffer control
+    if(controlState == WRITEBACK) begin // needs to write back
+      if (!waitingForAck) begin
+        writeBackAddressBuffer <= {nextWriteBackTag, '0};
+        if(writeBackAddressBuffer == {nextWriteBackTag, '0})
+          writeBackDataBuffer <= CacheDataFetcherIf.dataOut;
+      end
+
+    end
+  end
+
+
+
+
+
+
   
 endmodule

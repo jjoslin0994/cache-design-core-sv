@@ -33,10 +33,10 @@ module Way #(
   
   always_ff@(posedge clk or negedge reset_n) begin : DataManagement
       if(!reset_n) begin
-		    tag <= 	'0;
-        dirty <= 	0;
-        valid <= 	0;
-        data <= 	'0;
+		    tag   <= '0;
+        dirty <= 0;
+        valid <= 0;
+        data  <= '0;
         wayIf.thisWay = 1 << ID;
       end else if(WayIf.allocate) begin
           tag <= WayIf.address[ADDRESS_WIDTH - 1:OFFSET_WIDTH];
