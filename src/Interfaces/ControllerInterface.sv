@@ -16,8 +16,9 @@ logic [ADDRESS_WIDTH - 1:0]   fetchAddress;   // Base address of fetched block
 // -----------------------------------------
 // From cache to memory
 // -----------------------------------------
-logic [8 * BLOCK_SIZE - 1:0]  writeBackData;  // Data to write back to main memory from dirt valid line
+logic [8 * BLOCK_SIZE - 1:0]  writeBackData;    // Data to write back to main memory from dirt valid line
 logic [ADDRESS_WIDTH - 1:0]   writeBackAddress;
+logic                         writeBackAck;     // Ack storage of data
 
 // -----------------------------------------
 // CPU <--> Cache
