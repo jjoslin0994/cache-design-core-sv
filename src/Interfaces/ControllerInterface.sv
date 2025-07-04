@@ -24,7 +24,7 @@ logic                         writeBackAck;     // Ack storage of data
 // CPU <--> Cache
 // -----------------------------------------
 logic                       request, read, write; // Control
-logic [ADDRESS_WIDTH - 1:0] cpuRequesstAddress;   // Adress requested by CPU
+logic [ADDRESS_WIDTH - 1:0] cpuRequestAddress;   // Adress requested by CPU
 logic [DATA_WIDTH -1:0]     dataFromRegister;     // Write to Cache
 logic [DATA_WIDTH - 1:0]    dataToRegister;       // Write to Registers
 
@@ -32,8 +32,8 @@ logic [DATA_WIDTH - 1:0]    dataToRegister;       // Write to Registers
 
 
 
-modport controller (
-  input   cpuRequestAddress, dataFromRegister, fetchedData,
+modport slave (
+  input   request, cpuRequestAddress, dataFromRegister, fetchedData, read, write
   output  dataToRegister, fetchAddress, writeBackData, writeBackAddress
 );
 

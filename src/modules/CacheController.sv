@@ -15,12 +15,14 @@ module CacheController #(
     WayInterface 			        wayIfs[NUM_WAYS],
     WayLookupInterface		    wayLookupIf,
     EvictionPolicyInterface   evicPolicyIf,
-    CacheDataFetcherInterface CacheDataFetcherIf
+    EvictionInterface         evictionIf,
+    WayDataReaderInterface wayDataReaderIf,
+    WriteToCacheInterface     writeToCacheIf,
+    WriteBackInterface        wbIf
   );
 
   localparam OFFSET_WIDTH = $clog2(BLOCK_SIZE);
   localparam TAG_WIDTH    = ADDRESS_WIDTH - OFFSET_WIDTH;
-  
   
   //----------------------------------------------
   // Instantiate Eviction Policy
@@ -71,39 +73,95 @@ module CacheController #(
     .wayIfs(wayIfs)
   );
 
+  // ---------------------------------------------
+  // Instantiate WayDataReader Module
+  // ---------------------------------------------
+  WayDataReader #(
+    .NUM_WAYS(NUM_WAYS),
+    .DATA_WIDTH(DATA_WIDTH)
+  ) fetcherInst(
+    .wayIfs(wayIfs),
+    .WayDataReaderIf(wayDataReaderIf)
+  );
+
+  // ---------------------------------------------
+  // Instantiate Writeback Module
+  // ---------------------------------------------
+  WriteBack #(
+    .NUM_WAYS(NUM_WAYS),
+    .DATA_WIDTH(DATA_WIDTH),
+    .ADDRESS_WIDTH(ADDRESS_WIDTH)
+
+  ) writeBackInst(
+    .clk(clk),
+    .reset_n(reset_n),
+    .evicPolicyIf(evicPolicyIf),
+    .wayIfs(wayIfs),
+    .wbIf(wbIf)
+  );
+
+  // -----------------------------------------------------
+  // Instantiate Write To Cache module 
+  // -----------------------------------------------------
+  WriteToCache #(
+    .NUM_WAYS(NUM_WAYS),
+    .DATA_WIDTH(DATA_WIDTH)
+  )writeToCacheInst(
+    .wayIfs(wayIfs),
+    .writeToCacheIf(writeToCacheIf)
+  );
+
+  // -----------------------------------------------------
+  // Instantiate Eviction/Allocate module 
+  // -----------------------------------------------------
+  EvictAndAllocateWay #(
+    .NUM_WAYS(NUM_WAYS),
+    .ADDRESS_WIDTH(ADDRESS_WIDTH),
+    .BLOCK_SIZE(BLOCK_SIZE)
+  )evictAllocateInst(
+    .clk(clk),
+    .reset_n(reset_n),
+    .evictionIf(evictionIf),
+    .wayIfs(wayIfs)
+  );
+
   // -------------------------------------------------------
   // Flow Cotrol FSM
   // -------------------------------------------------------
 
-  localparam IDLE         = 3'd0; // Wait for CPU request
-  localparam LOOKUP       = 3'd1; // Compare tags of ways
-  localparam HIT          = 3'd2; // If hit get data from way
-  localparam MISS         = 3'd3; // Send requested data to registers
-  localparam ALLOCATE     = 3'd4; // Wrtie back from registers
-  localparam READ         = 3'd5; // Handle Miss (Get eviction target from Policy Module) request data from Main Mem
-  localparam WRITE        = 3'd6; // Overwrite way marked for eviction 
-  // localparam ALLOCATE_W   = 3'd7; // Allcoate register for write from registers
+  localparam [2:0]  IDLE         = 3'd0, // Wait for CPU request
+                    LOOKUP       = 3'd1, // Compare tags of ways
+                    HIT          = 3'd2, // If hit get data from way
+                    MISS         = 3'd3, // Send requested data to registers
+                    ALLOCATE     = 3'd4, // Wrtie back from registers
+                    READ         = 3'd5, // Handle Miss (Get eviction target from Policy Module) request data from Main Mem
+                    WRITE        = 3'd6; // Overwrite way marked for eviction 
 
   logic [2:0]                 controlState;
   logic [NUM_WAYS - 1:0]      dirtyBitBuffer;
   logic                       victimIsDirty; 
 
-
-
-
-  logic [DATA_WIDTH - 1:0]  dataToCpu;
-
-
+  logic [DATA_WIDTH - 1:0]    cpuRequestAddress_latched; // local copy of last request
+  logic                       read, write, validAddress, updateAge;
 
   always_ff @(posedge clk or negedge reset_n) begin : CacheFlowControl
     if(!reset_n) begin
       controlState <= IDLE;
+      cpuRequestAddress_latched  <= '0;
+      read                       <= 0;
+      write                      <= 0;
+      validAddress               <= 0;
+      updateAge                  <= 0;
     end
     else begin
       case (controlState)
         IDLE : begin
           if(controllerIf.request)begin
-            controlState <= LOOKUP;
+            controlState              <= LOOKUP;
+            read                      <= controllerIf.read;
+            write                     <= controllerIf.write;
+            validAddress              <= 1;
+            cpuRequestAddress_latched <= controllerIf.cpuRequestAddress;
           end
         end
 
@@ -113,37 +171,35 @@ module CacheController #(
           end 
           else if(wayLookupIf.miss === 1'b1)
             controlState <= MISS;
+          updateAge <= 1;
         end
 
         HIT : begin
-          // Policy updat
-          evicPolicyIf.hit        <= (wayLookupIf.hit == 1'b1); 
-          evicPolicyIf.hitWay     <= wayLookupIf.hitWay;
-          evicPolicyIf.miss       <= '0; 
 
           if(controllerIf.read) begin // fetch data from way 
-            CacheDataFetcherIf.targetWay <= wayLookupIf.hitWay;
             controlState <= READ;
           end
           if(controllerIf.write) begin
             controlState <= WRITE;
           end
-
+          updateAge      <= 0;
         end
 
         MISS : begin // check dirty bit, wiriteback as needed, wait for validation from writeback moduel
-          evicPolicyIf.miss <= (wayLookupIf.hit == 1'b0);
 
           if(victimIsDirty) begin
-            CacheDataFetcherIf.target <= evicPolicyIf.evicitionTarget; // Fetch Data for Write Back
+            wbIf.request <= 1; // Send request to WriteBack modlue
             controlState <= WRITEBACK;
           end else
             controlState <= ALLOCATE;
+
+            updateAge    <= 0;
         end
 
         WRITEBACK : begin // To Main Memory
-          if(!waitingForAck)begin
-            controlState <= ALLOCATE;
+          if(!wbIf.waitingForAck)begin
+            wbIf.dataIn <= wayDataReaderIf.dataOut;
+            wbIf.request <= 0; // 
           end
 
         end
@@ -151,7 +207,6 @@ module CacheController #(
         ALLOCATE : begin
 
           if(controllerIf.read) begin // fetch data from way 
-            CacheDataFetcherIf.targetWay <= wayLookupIf.hitWay;
             controlState <= READ;
           end
           if(controllerIf.write) begin
@@ -160,7 +215,7 @@ module CacheController #(
         end
 
         READ : begin
-          controllerIf.dataToRegister <= CacheDataFetcherIf.dataOut; // send read data to CPU register
+          controllerIf.dataToRegister <= wayDataReaderIf.dataOut; // send read data to CPU register
         end
 
         WRITE : begin // Write to Cache
@@ -173,6 +228,14 @@ module CacheController #(
     end
 
   end
+
+  generate
+    for(genvar i = 0; i < NUM_WAYS; i++) begin
+      assign wayIfs[i].updateAge = updateAge;
+    end
+
+  endgenerate
+  
   
 
   // ------------------------------------------
@@ -190,23 +253,30 @@ module CacheController #(
     victimIsDirty = |(dirtyBitBuffer);
   end
 
+  // ------------------------------------------
+  // Mask Tag
+  // ------------------------------------------
+  always_comb begin
+    wayLookupIf.tag = (cpuRequestAddress_latched >> OFFSET_WIDTH);
+  end
 
+  // --------------------------------------------
+  // Eviction Policy Assignments
+  // --------------------------------------------
+  always_comb begin
+    evicPolicyIf.hit    = (wayLookupIf.hit == 1'b1);
+    evicPolicyIf.hitWay = wayLookupIf.hitWay;
+    evicPolicyIf.miss   = wayLookupIf.miss;
+  end
 
-  always_ff @(posedge clk or negedge reset_n ) begin // writeback buffer control
-    if(controlState == WRITEBACK) begin // needs to write back
-      if (!waitingForAck) begin
-        writeBackAddressBuffer <= {nextWriteBackTag, '0};
-        if(writeBackAddressBuffer == {nextWriteBackTag, '0})
-          writeBackDataBuffer <= CacheDataFetcherIf.dataOut;
-      end
-
-    end
+  // --------------------------------------------
+  // Read way based on current control state
+  // --------------------------------------------
+  always_comb begin
+    wayDataReaderIf.target = (controlState == HIT || controlState == ALLOCATE) ? wayLookupIf.hitWay 
+    : (controlState == WRITEBACK) ? evicPolicyIf.evictionTarget 
+    : '0;
   end
 
 
-
-
-
-
-  
 endmodule
