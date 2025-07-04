@@ -21,6 +21,7 @@ interface WayInterface #(
   logic [NUM_WAYS - 1:0]                  thisWay; // One-hot encode of this way
   
   // Age Tracking
+  logic                         updateAge;
   logic 						            allocate;
   logic                        	accessed;
   logic [COUNTER_WIDTH - 1:0]  	accessedWayAge;
@@ -44,13 +45,12 @@ interface WayInterface #(
   modport master ( // for reading data
     output tag,
     output dataOut,
-    output valid
+    output valid,
+    output updateAge
   );
   
-    modport slave ( // for reading data
-    input tag,
-    input dataOut,
-    input valid
+    modport read ( // for reading data
+    ouptut dataOut
   );
   
   modport evictionState (
@@ -58,13 +58,13 @@ interface WayInterface #(
     output  accessedWayAge, // age of the accessed way
     input   dirty,          // this way has been written to 
     input   myAge,          // age of this way
-    input   expired,         // this way is the LRU
-    input   thisWay        // One-hot encoded
+    input   expired,        // this way is the LRU
+    input   thisWay         // One-hot encoded
     
   );
   
     modport internal ( // Full access (for Way module itself)
-    input  wEn, dataIn, accessed, address, allocate, accessedWayAge,
+    input  wEn, dataIn, accessed, address, allocate, accessedWayAge, updateAge,
     output dataOut, tag, valid, myAge, expired
   );
   

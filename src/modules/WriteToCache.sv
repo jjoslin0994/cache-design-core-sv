@@ -7,14 +7,14 @@ module WriteToCache #(
   parameter int DATA_WIDTH  = 32
 )(
   WayInterface.write          wayIfs[NUM_WAYS],
-  WriteToCacheInterface.slave WriteToCacheIf
+  WriteToCacheInterface.slave writeToCacheIf
 );
 
   generate
     
     for(genvar i = 0; i < NUM_WAYS; i++) begin
-      assign wayIfs[i].dataIn = {DATA_WIDTH{WriteToCacheIf.targetWay[i] == 1'b1}} & WriteToCacheIf.data;
-      assign wayIfs[i].wEn = WriteToCacheIf.targetWay[i] == 1'b1;
+      assign wayIfs[i].dataIn = {DATA_WIDTH{writeToCacheIf.targetWay[i] == 1'b1}} & writeToCacheIf.data;
+      assign wayIfs[i].wEn = writeToCacheIf.targetWay[i] == 1'b1;
     end
 
   endgenerate

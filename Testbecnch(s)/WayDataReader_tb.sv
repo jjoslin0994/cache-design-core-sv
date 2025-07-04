@@ -1,7 +1,7 @@
 `include "design_params.sv"
 import design_params::*;
 
-class CacheFetchTest;
+class WayDataReaderTest;
   rand bit [DATA_WIDTH - 1:0] testData[NUM_WAYS]; // Dummy way data
   
   
@@ -24,15 +24,15 @@ module tb_CacheFetcher;
   
     
   // -------------------------------------------------------
-  // Instantiate CacheDataFetcher Interface
+  // Instantiate WayDataReader Interface
   // -------------------------------------------------------
-  CacheDataFetcherInterface #(
+  WayDataReaderInterface #(
     .NUM_WAYS(NUM_WAYS),
     .DATA_WIDTH(DATA_WIDTH)
-  )cacheDataFetcherIf();
+  )WayDataReaderIf();
   
-  virtual CacheDataFetcherInterface.master fetcherIfMaster;
-  virtual CacheDataFetcherInterface.slave fetcherIfSlave;
+  virtual WayDataReaderInterface.master fetcherIfMaster;
+  virtual WayDataReaderInterface.slave fetcherIfSlave;
 
 
   
@@ -53,18 +53,18 @@ module tb_CacheFetcher;
   // ------------------------------------------------------
   // Instantiate DUT Cache Data Fetcher
   // ------------------------------------------------------
-  CacheDataFetcher #(
+  WayDataReader #(
     .NUM_WAYS(NUM_WAYS),
     .DATA_WIDTH(DATA_WIDTH)
   ) fetcherInst(
     .wayIfs(wayIfs),
-    .CacheDataFetcherIf(cacheDataFetcherIf)
+    .WayDataReaderIf(WayDataReaderIf)
   );
   
   generate
     for (genvar gi = 0; gi < NUM_WAYS; gi++) begin : bind_modports
       initial begin
-        wayIfs_master[gi] = wayIfs[gi].master;
+        assign wayIfs_master[gi] = wayIfs[gi].master;
       end
     end
   endgenerate
@@ -77,14 +77,14 @@ module tb_CacheFetcher;
     
     
     
-    CacheFetchTest test = new();
+    WayDataReaderTest test = new();
     test.populateArray();
 
 
 
 
-    fetcherIfMaster = cacheDataFetcherIf.master;
-    fetcherIfSlave  = cacheDataFetcherIf.slave;
+    fetcherIfMaster = WayDataReaderIf.master;
+    fetcherIfSlave  = WayDataReaderIf.slave;
     clk = 0;
     reset_n = 0; // trigger reset
     #2;

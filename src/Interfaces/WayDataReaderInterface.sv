@@ -1,4 +1,4 @@
-interface CacheDataFetcherInterface #(
+interface WayDataReaderInterface #(
 	parameter int NUM_WAYS 		= 4,
   	parameter int DATA_WIDTH 	= 32
 );

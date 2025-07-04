@@ -9,7 +9,7 @@ module Way #(
   	logic 							clk,		// global clock
   	logic 							reset_n,	// global asynch reset
   
-  	WayInterface.internal 			WayIf 		// Internal Interface
+  	WayInterface.internal 			wayIf 		// Internal Interface
 );
   
   
@@ -38,18 +38,18 @@ module Way #(
         valid <= 0;
         data  <= '0;
         wayIf.thisWay = 1 << ID;
-      end else if(WayIf.allocate) begin
-          tag <= WayIf.address[ADDRESS_WIDTH - 1:OFFSET_WIDTH];
+      end else if(wayIf.allocate) begin
+          tag <= wayIf.address[ADDRESS_WIDTH - 1:OFFSET_WIDTH];
           dirty <= 	0;
           valid <= 	1;
-      end else if (WayIf.wEn) begin
-      	  data <= 	WayIf.dataIn;
+      end else if (wayIf.wEn) begin
+      	  data <= 	wayIf.dataIn;
           dirty <= 	1;
       end
   	end : DataManagement
   
 
-  	assign WayIf.dataOut = data; 
+  	assign wayIf.dataOut = data; 
   
   
   
@@ -64,10 +64,10 @@ module Way #(
     ) AgeTracker (
       .clk(clk),
       .reset_n(reset_n),
-      .accessedWayAge(WayIf.accessedWayAge),
-      .accessed(WayIf.accessed),
-      .myAge(WayIf.myAge),
-      .expired(WayIf.expired)
+      .accessedWayAge(wayIf.accessedWayAge),
+      .accessed(wayIf.accessed),
+      .myAge(wayIf.myAge),
+      .expired(wayIf.expired)
     );
 
 endmodule
@@ -91,15 +91,16 @@ module WayAgeTracker #(
   assign myAge = age;
   
   always_ff @(posedge clk or negedge reset_n) begin : AgeCounter
-    if(!reset_n) begin // set unique age at reset via ID
+    if (!reset_n) begin
       age <= ID;
-    end else if((accessed && myAge == accessedWayAge)) begin
-      age <= 0; // if this way accessed or allocated set age to 0
-    end else if(age < accessedWayAge) begin
-      age <= age + 1; // everything younger than accessd way moves up 
+    end else if (wayIf.updateAge) begin 
+      if (accessed && (myAge == accessedWayAge)) begin
+        age <= 0;
+      end else if (age < accessedWayAge) begin
+        age <= age + 1;
+      end
     end
-    
   end
+
  
-  
 endmodule
