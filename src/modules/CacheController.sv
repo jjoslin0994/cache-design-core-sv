@@ -199,7 +199,8 @@ module CacheController #(
         WRITEBACK : begin // To Main Memory
           if(!wbIf.waitingForAck)begin
             wbIf.dataIn <= wayDataReaderIf.dataOut;
-            wbIf.request <= 0; // 
+            wbIf.request <= 0; 
+            controlState <= ALLOCATE;
           end
 
         end
