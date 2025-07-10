@@ -5,17 +5,20 @@ interface WayInterface #(
   	parameter int BLOCK_SIZE = 32,
   	parameter int ADDRESS_WIDTH = 32
 );
+
+
   
-  localparam OFFSET_WIDTH = $clog2(BLOCK_SIZE);
-  localparam TAG_WIDTH = ADDRESS_WIDTH - OFFSET_WIDTH;
+  localparam int WORDS_PER_BLOCK  = (BLOCK_SIZE / (DATA_WIDTH / 8));
+  localparam int OFFSET_WIDTH     = $clog2(WORDS_PER_BLOCK);
+  localparam int TAG_WIDTH        = ADDRESS_WIDTH - OFFSET_WIDTH;
   
   // -------------------------------------------
   // Signals 
   // -------------------------------------------
   
   // Metadata
-  logic [ADDRESS_WIDTH - 1:0] 				    address;// address from the memory
-  logic [ADDRESS_WIDTH - 1:OFFSET_WIDTH] 	tag;	  // tag to compare address
+  logic [ADDRESS_WIDTH - 1:0] 				    line_address;// line_address from the memory
+  logic [ADDRESS_WIDTH - 1:OFFSET_WIDTH] 	tag;	  // tag to compare line_address
   logic 									                valid;	// vaidity state
   logic 									                dirty;
   logic [NUM_WAYS - 1:0]                  thisWay; // One-hot encode of this way
@@ -29,9 +32,11 @@ interface WayInterface #(
   logic                       	expired;
   
   // Data Management
-  logic										          wEn;	// write enable
-  logic [DATA_WIDTH - 1:0]					dataIn;	// data coming in
-  logic [DATA_WIDTH - 1:0]					dataOut;// data being read
+  logic										                    wEn;	// write enable
+  logic [DATA_WIDTH * WORDS_PER_BLOCK - 1:0]  fetched_line;
+  logic [ADDRESS_WIDTH - 1:0]                 offset;
+  logic [DATA_WIDTH - 1:0]					          dataIn;	// data coming in
+  logic [DATA_WIDTH - 1:0]					          dataOut;// data being read
   
   
   // -------------------------------------------
@@ -50,7 +55,7 @@ interface WayInterface #(
   );
   
     modport read ( // for reading data
-    ouptut dataOut
+    output dataOut
   );
   
   modport evictionState (
@@ -63,9 +68,23 @@ interface WayInterface #(
     
   );
   
-    modport internal ( // Full access (for Way module itself)
-    input  wEn, dataIn, accessed, address, allocate, accessedWayAge, updateAge,
-    output dataOut, tag, valid, myAge, expired
+  modport internal (
+    input  wEn,
+    input  dataIn,
+    input  accessed,
+    input  line_address,
+    input  allocate,
+    input  accessedWayAge,
+    input  updateAge,
+    input  write_address,
+    input  read_address,
+    output dataOut,
+    output tag,
+    output valid,
+    output myAge,
+    output expired,
+    output dirty
   );
+
   
 endinterface : WayInterface

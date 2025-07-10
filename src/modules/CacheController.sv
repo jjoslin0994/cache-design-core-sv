@@ -16,13 +16,15 @@ module CacheController #(
     WayLookupInterface		    wayLookupIf,
     EvictionPolicyInterface   evicPolicyIf,
     EvictionInterface         evictionIf,
-    WayDataReaderInterface wayDataReaderIf,
+    WayDataReaderInterface    wayDataReaderIf,
     WriteToCacheInterface     writeToCacheIf,
     WriteBackInterface        wbIf
   );
 
-  localparam OFFSET_WIDTH = $clog2(BLOCK_SIZE);
-  localparam TAG_WIDTH    = ADDRESS_WIDTH - OFFSET_WIDTH;
+  
+  localparam int WORDS_PER_BLOCK  = (BLOCK_SIZE / (DATA_WIDTH / 8));
+  localparam int OFFSET_WIDTH     = $clog2(WORDS_PER_BLOCK);
+  localparam int TAG_WIDTH        = ADDRESS_WIDTH - OFFSET_WIDTH;
   
   //----------------------------------------------
   // Instantiate Eviction Policy
@@ -78,8 +80,9 @@ module CacheController #(
   // ---------------------------------------------
   WayDataReader #(
     .NUM_WAYS(NUM_WAYS),
-    .DATA_WIDTH(DATA_WIDTH)
-  ) fetcherInst(
+    .DATA_WIDTH(DATA_WIDTH),
+    .ADDRESS_WIDTH(ADDRESS_WIDTH)
+  ) wayDataReaderInst(
     .wayIfs(wayIfs),
     .WayDataReaderIf(wayDataReaderIf)
   );
@@ -141,8 +144,14 @@ module CacheController #(
   logic [NUM_WAYS - 1:0]      dirtyBitBuffer;
   logic                       victimIsDirty; 
 
-  logic [DATA_WIDTH - 1:0]    cpuRequestAddress_latched; // local copy of last request
-  logic                       read, write, validAddress, updateAge;
+  logic [DATA_WIDTH - 1:0]    cpuRequestAddress_latched;  // local copy of last request
+  logic [DATA_WIDTH - 1:0]    read_data_latch;
+  logic                       readyToSend;
+  logic [OFFSET_WIDTH - 1:0]  offset, offset_latch;
+  logic                       read,                       // CPU read request
+                              write,                      // CPU write request
+                              validAddress,               // latched address is valid
+                              updateAge;                  // gate LRU age update 
 
   always_ff @(posedge clk or negedge reset_n) begin : CacheFlowControl
     if(!reset_n) begin
@@ -152,6 +161,7 @@ module CacheController #(
       write                      <= 0;
       validAddress               <= 0;
       updateAge                  <= 0;
+      readyToSend                <= 0;
     end
     else begin
       case (controlState)
@@ -160,6 +170,7 @@ module CacheController #(
             controlState              <= LOOKUP;
             read                      <= controllerIf.read;
             write                     <= controllerIf.write;
+            readyToSend               <= 0;
             validAddress              <= 1;
             cpuRequestAddress_latched <= controllerIf.cpuRequestAddress;
           end
@@ -171,12 +182,15 @@ module CacheController #(
           end 
           else if(wayLookupIf.miss === 1'b1)
             controlState <= MISS;
-          updateAge <= 1;
+
+          updateAge     <= 1;
+          offset_latch  <= offset;
         end
 
         HIT : begin
 
           if(controllerIf.read) begin // fetch data from way 
+            read_data_latch <= wayDataReaderIf.dataOut;
             controlState <= READ;
           end
           if(controllerIf.write) begin
@@ -216,7 +230,7 @@ module CacheController #(
         end
 
         READ : begin
-          controllerIf.dataToRegister <= wayDataReaderIf.dataOut; // send read data to CPU register
+          readyToSend <= 1;
         end
 
         WRITE : begin // Write to Cache
@@ -277,6 +291,20 @@ module CacheController #(
     wayDataReaderIf.target = (controlState == HIT || controlState == ALLOCATE) ? wayLookupIf.hitWay 
     : (controlState == WRITEBACK) ? evicPolicyIf.evictionTarget 
     : '0;
+  end
+
+  // -------------------------------------------------
+  // Compute Offset
+  // -------------------------------------------------
+  always_comb begin
+    offset = controllerIf.cpuRequestAddress_latched[OFFSET_WIDTH - 1:0];
+  end
+
+  // -------------------------------------------------
+  // Propogate offset to Data Reader
+  // -------------------------------------------------
+  always_comb begin
+    wayDataReaderIf.offset = offset_latch;
   end
 
 

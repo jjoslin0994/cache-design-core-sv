@@ -23,8 +23,9 @@ logic                         writeBackAck;     // Ack storage of data
 // -----------------------------------------
 // CPU <--> Cache
 // -----------------------------------------
-logic                       request, read, write; // Control
-logic [ADDRESS_WIDTH - 1:0] cpuRequestAddress;   // Adress requested by CPU
+logic                       request, read, write, // Control
+                            readyToSend;
+logic [ADDRESS_WIDTH - 1:0] cpuRequestAddress;    // Adress requested by CPU
 logic [DATA_WIDTH -1:0]     dataFromRegister;     // Write to Cache
 logic [DATA_WIDTH - 1:0]    dataToRegister;       // Write to Registers
 
