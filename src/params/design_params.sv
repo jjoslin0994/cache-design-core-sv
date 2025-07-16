@@ -23,6 +23,7 @@ package design_params;
     cpu_raw_request_t         raw_req;
     logic [OFFSET_WIDTH-1:0]  offset;
     logic [TAG_WIDTH-1:0]     tag;
+    logic [ADDRESS_WIDTH-1:0] block_address;
   } pipe0_t;
 
   typedef struct packed {

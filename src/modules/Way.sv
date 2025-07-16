@@ -1,5 +1,5 @@
 module Way #(
-  	parameter int NUM_WAYS      = 512,
+  	parameter int NUM_WAYS      = 4,
     parameter int ID            = 0,
   	parameter int COUNTER_WIDTH = $clog2(NUM_WAYS),
   	parameter int DATA_WIDTH    = 32,
@@ -47,23 +47,31 @@ module Way #(
   // ------------------------------------------------------
   // Way Allcocate and Write
   // ------------------------------------------------------
+  logic w_ack;
   always_ff @ (posedge clk or negedge reset_n) begin
     if(!reset_n) begin
-      dirty     <= 0;
+      dirty <= 1'b0;
+      w_ack <= 1'b0;
       for(int i = 0; i < WORDS_PER_BLOCK; i++) begin
-        cache_line_array[i] <= '0;
+        cache_line_array[i] <= '0; // clear cache lines for easy debugging
       end
-
     end else if(wayIf.allocate) begin
+      // Scan though cache line to write to correct word
       for(int i = 0; i < WORDS_PER_BLOCK; i++) begin
         cache_line_array[i] <= wayIf.fetched_line[i * DATA_WIDTH +: DATA_WIDTH];
       end
-      dirty <= 1;
-    end else if(wayIf.w_en) begin
-      cache_line_array[wayIf.offset] <= wayIf.dataIn;
-      dirty <= 1;
+      // Set clean on allocate
+      dirty <= 1'b0;
+    end else if(wayIf.w_en & !w_ack) begin
+        cache_line_array[wayIf.offset]  <= wayIf.dataIn;  // write data to word
+        dirty                           <= 1'b1;          // Mark dirty to trigger writeback
+        w_ack                           <= 1'b1;          // Set ack
+    end else if(w_ack & !wayIf.w_en) begin
+      w_ack <= 1'b0;
     end
   end
+
+  assign wayIf.w_ack = w_ack; // Send ack through interface
 
   // --------------------------------------------------
   // Read

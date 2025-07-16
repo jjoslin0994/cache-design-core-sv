@@ -9,8 +9,8 @@ interface ControllerInterface #(
 // -----------------------------------------
 // From memory to cache
 // -----------------------------------------
-logic [8 * BLOCK_SIZE - 1:0]  fetchedData;    // Data fetched from main memory
-logic [ADDRESS_WIDTH - 1:0]   fetchAddress;   // Base address of fetched block
+logic [8 * BLOCK_SIZE - 1:0]  fetch_data;    // Data fetched from main memory
+logic [ADDRESS_WIDTH - 1:0]   fetch_address;   // Base address of fetched block
 
 
 // -----------------------------------------
@@ -30,17 +30,14 @@ logic [DATA_WIDTH -1:0]     dataFromRegister;     // Write to Cache
 logic [DATA_WIDTH - 1:0]    dataToRegister;       // Write to Registers
 
 
-
-
-
 modport slave (
-  input   request, cpuRequestAddress, dataFromRegister, fetchedData, read, write
-  output  dataToRegister, fetchAddress, writeBackData, writeBackAddress
+  input   request, cpuRequestAddress, dataFromRegister, fetch_data, read, write
+  output  dataToRegister, fetch_address, writeBackData, writeBackAddress
 );
 
 modport memory (
-  input   fetchAddress, writeBackAddress, writeBackData,
-  output  fetchedData
+  input   fetch_address, writeBackAddress, writeBackData,
+  output  fetch_data
 );
 
 modport cpu (
