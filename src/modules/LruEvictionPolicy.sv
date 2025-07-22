@@ -14,14 +14,24 @@ module LruEvictionPolicy #(
   //------------------------------------------------------------
   logic [COUNTER_WIDTH - 1:0] ageLocalBuffer [NUM_WAYS];
   logic [COUNTER_WIDTH - 1:0] accessedWayAge;
+
   generate
-
     for(genvar i = 0; i < NUM_WAYS; i++) begin
-      assign wayIfs[i].accessed = evicPolicyIf.hitWay[i];
-      assign ageLocalBuffer[i] = (evicPolicyIf.hitWay[i]) ? wayIfs[i].myAge : '0;
+      assign wayIfs[i].accessed = evicPolicyIf.accessed_way[i];
+      assign ageLocalBuffer[i] = (evicPolicyIf.accessed_way[i]) ? wayIfs[i].myAge : '0;
     end
-
   endgenerate
+
+  logic [NUM_WAYS - 1:0] update_done_buffer;
+  generate
+    for(genvar i = 0; i < NUM_WAYS; i++) begin
+      assign update_done_buffer[i] = wayIf[i].update_done & evicPolicyIf.updateAge;
+    end
+  endgenerate
+
+  always_comb begin
+    evictionIf.all_age_update_done = &update_done_buffer;
+  end
 
   always_comb begin // OR together age buffer
     accessedWayAge = 0;
@@ -37,7 +47,7 @@ module LruEvictionPolicy #(
   endgenerate
 
   // ----------------------------------------------------------
-  // Prepare evicition target --- notify control module
+  // Identify evicition target --- notify control module
   // ----------------------------------------------------------
   logic [NUM_WAYS - 1:0] evicitionTarget;
 
@@ -51,6 +61,8 @@ module LruEvictionPolicy #(
     evicPolicyIf.evictionTarget = evictionTarget;
     evicPolicyIf.evictionReady  = |(evicitionTarget);
   end
+
+  
 
   endmodule
 

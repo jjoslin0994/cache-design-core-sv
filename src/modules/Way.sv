@@ -107,22 +107,28 @@ module WayAgeTracker #(
 );
   
   logic [COUNTER_WIDTH - 1:0] age;
-  
+  logic has_updated;
   
   assign wayIf.expired = (age == NUM_WAYS - 1);
   assign wayIf.myAge = age;
+
+  // has_updated signals to control that it can proceed in cache routein 
   
   always_ff @(posedge clk or negedge reset_n) begin : AgeCounter
     if (!reset_n) begin
-      age <= ID;
-    end else if (wayIf.updateAge) begin 
+      age         <= ID;
+      has_updated <= 0;
+    end else if (wayIf.updateAge && !has_updated) begin 
+      has_updated <= 1'b1;
       if (wayIf.accessed && (age == wayIf.accessedWayAge)) begin
         age <= 0;
       end else if (age < wayIf.accessedWayAge) begin
         age <= age + 1;
-      end
+      end else
+        age <= age;
+    end else if (wayIf.updateAge && has_updated) begin
+      has_updated <= 1'b0;
     end
   end
-
  
 endmodule
